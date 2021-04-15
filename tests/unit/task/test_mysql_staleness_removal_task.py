@@ -24,9 +24,9 @@ class TestMySQLStalenessRemovalTask(unittest.TestCase):
     def test_marker(self, mock_create_engine: Any, mock_session_maker: Any) -> None:
         task = MySQLStalenessRemovalTask()
         job_config = ConfigFactory.from_dict({
-            'job.identifier': 'remove_stale_data_job',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.MYSQL_ENDPOINT}': 'foobar',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.STALENESS_MAX_PCT}': 5,
+            'job.identifier': 'mysql_remove_stale_data_job',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.CONN_STRING}': 'foobar',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.STALENESS_MAX_PCT}': 5,
             MySQLCSVPublisher.JOB_PUBLISH_TAG: 'foo'
         })
         task.init(job_config)
@@ -36,10 +36,10 @@ class TestMySQLStalenessRemovalTask(unittest.TestCase):
 
         task = MySQLStalenessRemovalTask()
         job_config = ConfigFactory.from_dict({
-            'job.identifier': 'remove_stale_data_job',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.MYSQL_ENDPOINT}': 'foobar',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.STALENESS_MAX_PCT}': 5,
-            f'{task.get_scope()}.{mysql_staleness_removal_task.MS_TO_EXPIRE}': 86400000
+            'job.identifier': 'mysql_remove_stale_data_job',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.CONN_STRING}': 'foobar',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.STALENESS_MAX_PCT}': 5,
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.MS_TO_EXPIRE}': 86400000
         })
         task.init(job_config)
 
@@ -51,10 +51,10 @@ class TestMySQLStalenessRemovalTask(unittest.TestCase):
     def test_config_with_publish_tag_and_ms_to_expire(self, mock_create_engine: Any, mock_session_maker: Any) -> None:
         task = MySQLStalenessRemovalTask()
         job_config = ConfigFactory.from_dict({
-            'job.identifier': 'remove_stale_data_job',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.MYSQL_ENDPOINT}': 'foobar',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.STALENESS_MAX_PCT}': 5,
-            f'{task.get_scope()}.{mysql_staleness_removal_task.MS_TO_EXPIRE}': 86400000,
+            'job.identifier': 'mysql_remove_stale_data_job',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.CONN_STRING}': 'foobar',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.STALENESS_MAX_PCT}': 5,
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.MS_TO_EXPIRE}': 86400000,
             MySQLCSVPublisher.JOB_PUBLISH_TAG: 'foo'
         })
 
@@ -65,10 +65,10 @@ class TestMySQLStalenessRemovalTask(unittest.TestCase):
     def test_ms_to_expire_too_small(self, mock_create_engine: Any, mock_session_maker: Any) -> None:
         task = MySQLStalenessRemovalTask()
         job_config = ConfigFactory.from_dict({
-            'job.identifier': 'remove_stale_data_job',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.MYSQL_ENDPOINT}': 'foobar',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.STALENESS_MAX_PCT}': 5,
-            f'{task.get_scope()}.{mysql_staleness_removal_task.MS_TO_EXPIRE}': 24 * 60 * 60 * 100,
+            'job.identifier': 'mysql_remove_stale_data_job',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.CONN_STRING}': 'foobar',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.STALENESS_MAX_PCT}': 5,
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.MS_TO_EXPIRE}': 24 * 60 * 60 * 100,
         })
 
         self.assertRaises(Exception, task.init, job_config)
@@ -78,11 +78,11 @@ class TestMySQLStalenessRemovalTask(unittest.TestCase):
     def test_validation_threshold_override(self, mock_create_engine: Any, mock_session_maker: Any) -> None:
         task = MySQLStalenessRemovalTask()
         job_config = ConfigFactory.from_dict({
-            'job.identifier': 'remove_stale_data_job',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.MYSQL_ENDPOINT}': 'foobar',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.STALENESS_MAX_PCT}': 5,
-            f'{task.get_scope()}.{mysql_staleness_removal_task.STALENESS_PCT_MAX_DICT}': {'table_metadata': 30},
-            f'{task.get_scope()}.{mysql_staleness_removal_task.TARGET_TABLES}': ['table_metadata'],
+            'job.identifier': 'mysql_remove_stale_data_job',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.CONN_STRING}': 'foobar',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.STALENESS_MAX_PCT}': 5,
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.STALENESS_PCT_MAX_DICT}': {'table_metadata': 30},
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.TARGET_TABLES}': ['table_metadata'],
             MySQLCSVPublisher.JOB_PUBLISH_TAG: 'foo'
         })
         mock_total_records_query = mock_session_maker.return_value.return_value.query.return_value.scalar
@@ -100,11 +100,11 @@ class TestMySQLStalenessRemovalTask(unittest.TestCase):
     def test_dry_run(self, mock_create_engine: Any, mock_session_maker: Any) -> None:
         task = MySQLStalenessRemovalTask()
         job_config = ConfigFactory.from_dict({
-            'job.identifier': 'remove_stale_data_job',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.MYSQL_ENDPOINT}': 'foobar',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.STALENESS_MAX_PCT}': 5,
-            f'{task.get_scope()}.{mysql_staleness_removal_task.TARGET_TABLES}': ['foo'],
-            f'{task.get_scope()}.{mysql_staleness_removal_task.DRY_RUN}': True,
+            'job.identifier': 'mysql_remove_stale_data_job',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.CONN_STRING}': 'foobar',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.STALENESS_MAX_PCT}': 5,
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.TARGET_TABLES}': ['foo'],
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.DRY_RUN}': True,
             MySQLCSVPublisher.JOB_PUBLISH_TAG: 'foo'
         })
         mock_commit = mock_session_maker.return_value.return_value.commit
@@ -118,10 +118,10 @@ class TestMySQLStalenessRemovalTask(unittest.TestCase):
     def test_stale_records_filter_condition(self, mock_create_engine: Any, mock_session_maker: Any) -> None:
         task = MySQLStalenessRemovalTask()
         job_config = ConfigFactory.from_dict({
-            'job.identifier': 'remove_stale_data_job',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.MYSQL_ENDPOINT}': 'foobar',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.STALENESS_MAX_PCT}': 5,
-            f'{task.get_scope()}.{mysql_staleness_removal_task.TARGET_TABLES}': ['table_metadata'],
+            'job.identifier': 'mysql_remove_stale_data_job',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.CONN_STRING}': 'foobar',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.STALENESS_MAX_PCT}': 5,
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.TARGET_TABLES}': ['table_metadata'],
             MySQLCSVPublisher.JOB_PUBLISH_TAG: 'foo'
         })
 
@@ -132,11 +132,11 @@ class TestMySQLStalenessRemovalTask(unittest.TestCase):
 
         task = MySQLStalenessRemovalTask()
         job_config = ConfigFactory.from_dict({
-            'job.identifier': 'remove_stale_data_job',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.MYSQL_ENDPOINT}': 'foobar',
-            f'{task.get_scope()}.{mysql_staleness_removal_task.STALENESS_MAX_PCT}': 5,
-            f'{task.get_scope()}.{mysql_staleness_removal_task.TARGET_TABLES}': ['table_metadata'],
-            f'{task.get_scope()}.{mysql_staleness_removal_task.MS_TO_EXPIRE}': 24 * 60 * 60 * 1000
+            'job.identifier': 'mysql_remove_stale_data_job',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.CONN_STRING}': 'foobar',
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.STALENESS_MAX_PCT}': 5,
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.TARGET_TABLES}': ['table_metadata'],
+            f'{task.get_scope()}.{MySQLStalenessRemovalTask.MS_TO_EXPIRE}': 24 * 60 * 60 * 1000
 
         })
 

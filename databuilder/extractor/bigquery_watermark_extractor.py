@@ -40,27 +40,31 @@ class BigQueryWatermarkExtractor(BaseBigQueryExtractor):
             for table in page['tables']:
                 tableRef = table['tableReference']
                 table_id = tableRef['tableId']
+                table_creation_time = float(table['creationTime']) / 1000
+                # only extract watermark metadata for tables created before the cut-off time
+                if table_creation_time < self.cutoff_time:
+                    # BigQuery tables that have 8 digits as last characters are
+                    # considered date range tables and are grouped together in the UI.
+                    # ( e.g. ga_sessions_20190101, ga_sessions_20190102, etc. )
+                    # We use these suffixes to determine high and low watermarks
+                    if self._is_sharded_table(table_id):
+                        suffix = table_id[-BigQueryWatermarkExtractor.DATE_LENGTH:]
+                        prefix = table_id[:-BigQueryWatermarkExtractor.DATE_LENGTH]
 
-                # BigQuery tables that have 8 digits as last characters are
-                # considered date range tables and are grouped together in the UI.
-                # ( e.g. ga_sessions_20190101, ga_sessions_20190102, etc. )
-                # We use these suffixes to determine high and low watermarks
-                if self._is_sharded_table(table_id):
-                    suffix = table_id[-BigQueryWatermarkExtractor.DATE_LENGTH:]
-                    prefix = table_id[:-BigQueryWatermarkExtractor.DATE_LENGTH]
-
-                    if prefix in sharded_table_watermarks:
-                        sharded_table_watermarks[prefix]['low'] = min(sharded_table_watermarks[prefix]['low'], suffix)
-                        sharded_table_watermarks[prefix]['high'] = max(sharded_table_watermarks[prefix]['high'], suffix)
+                        if prefix in sharded_table_watermarks:
+                            sharded_table_watermarks[prefix]['low'] = min(
+                                sharded_table_watermarks[prefix]['low'], suffix)
+                            sharded_table_watermarks[prefix]['high'] = max(
+                                sharded_table_watermarks[prefix]['high'], suffix)
+                        else:
+                            sharded_table_watermarks[prefix] = {'high': suffix, 'low': suffix, 'table': table}
                     else:
-                        sharded_table_watermarks[prefix] = {'high': suffix, 'low': suffix, 'table': table}
-                else:
-                    partitions = self._get_partitions(table, tableRef)
-                    if not partitions:
-                        continue
-                    low, high = self._get_partition_watermarks(table, tableRef, partitions)
-                    yield low
-                    yield high
+                        partitions = self._get_partitions(table, tableRef)
+                        if not partitions:
+                            continue
+                        low, high = self._get_partition_watermarks(table, tableRef, partitions)
+                        yield low
+                        yield high
 
             for prefix, td in sharded_table_watermarks.items():
                 table = td['table']

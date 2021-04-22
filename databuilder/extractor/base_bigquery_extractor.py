@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import time
 import logging
 from collections import namedtuple
 from typing import (
@@ -29,6 +30,8 @@ class BaseBigQueryExtractor(Extractor):
     CRED_KEY = 'project_cred'
     PAGE_SIZE_KEY = 'page_size'
     FILTER_KEY = 'filter'
+    # metadata for tables created after the cutoff time would not be extracted from bigquery.
+    CUTOFF_TIME_KEY = 'cutoff_time'
     _DEFAULT_SCOPES = ['https://www.googleapis.com/auth/bigquery.readonly']
     DEFAULT_PAGE_SIZE = 300
     NUM_RETRIES = 3
@@ -43,6 +46,7 @@ class BaseBigQueryExtractor(Extractor):
             BaseBigQueryExtractor.PAGE_SIZE_KEY,
             BaseBigQueryExtractor.DEFAULT_PAGE_SIZE)
         self.filter = conf.get_string(BaseBigQueryExtractor.FILTER_KEY, '')
+        self.cutoff_time = conf.get_float(BaseBigQueryExtractor.CUTOFF_TIME_KEY, float(time.time()))
 
         if self.key_path:
             credentials = (

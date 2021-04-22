@@ -1,6 +1,6 @@
 # Copyright Contributors to the Amundsen project.
 # SPDX-License-Identifier: Apache-2.0
-
+import datetime
 import logging
 import re
 from collections import namedtuple
@@ -136,11 +136,13 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
 
         :return: Provides a record or None if no more to extract
         """
+        cutoff_time = datetime.datetime.fromtimestamp(self.cutoff_time).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         body = {
             'resourceNames': [f'projects/{self.project_id}'],
             'pageSize': self.pagesize,
             'filter': 'resource.type="bigquery_resource" AND '
                       'protoPayload.methodName="jobservice.jobcompleted" AND '
+                      f'protoPayload.serviceData.jobCompletedEvent.job.jobStatistics.createTime < "{cutoff_time}" AND '
                       f'timestamp >= "{self.timestamp}"'
         }
         for page in self._page_over_results(body):

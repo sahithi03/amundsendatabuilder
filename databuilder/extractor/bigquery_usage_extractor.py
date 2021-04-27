@@ -1,6 +1,6 @@
 # Copyright Contributors to the Amundsen project.
 # SPDX-License-Identifier: Apache-2.0
-import datetime
+
 import logging
 import re
 from collections import namedtuple
@@ -30,8 +30,8 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
     _DEFAULT_SCOPES = ['https://www.googleapis.com/auth/cloud-platform']
     EMAIL_PATTERN = 'email_pattern'
     DELAY_TIME = 'delay_time'
-    # GCP console allows running queries using tables from a project different from the one we are using the
-    # extractor for; if 'count_tables_only_from_project_id_key' is enabled only usage metadata of referenced tables
+    # GCP console allows running queries using tables from a project different from the one the extractor is used for;
+    # if 'count_tables_only_from_project_id_key' is enabled only usage metadata of referenced tables
     # in the given project_id_key for the extractor is taken into account and usage metadata of referenced tables
     # from other projects is ignored.
     COUNT_TABLES_ONLY_FROM_PROJECT_ID_KEY = 'count_tables_only_from_project_id_key'
@@ -136,14 +136,14 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
 
         :return: Provides a record or None if no more to extract
         """
-        cutoff_time = datetime.datetime.fromtimestamp(self.cutoff_time).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         body = {
             'resourceNames': [f'projects/{self.project_id}'],
             'pageSize': self.pagesize,
             'filter': 'resource.type="bigquery_resource" AND '
                       'protoPayload.methodName="jobservice.jobcompleted" AND '
-                      f'protoPayload.serviceData.jobCompletedEvent.job.jobStatistics.createTime < "{cutoff_time}" AND '
-                      f'timestamp >= "{self.timestamp}"'
+                      'protoPayload.authenticationInfo.principalEmail="pawans@wepay.com" AND '
+                      f'timestamp >= "{self.timestamp}" AND '
+                      f'protoPayload.serviceData.jobCompletedEvent.job.jobStatistics.createTime < "{self.cutoff_time}"'
         }
         for page in self._page_over_results(body):
             for entry in page['entries']:

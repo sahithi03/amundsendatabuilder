@@ -4,6 +4,8 @@
 import datetime
 import logging
 import textwrap
+import time
+from calendar import timegm
 from collections import namedtuple
 from typing import (
     Any, Dict, Iterator, List, Tuple, Union,
@@ -32,6 +34,7 @@ class BigQueryWatermarkExtractor(BaseBigQueryExtractor):
                          dataset: DatasetRef
                          ) -> Iterator[Watermark]:
         sharded_table_watermarks: Dict[str, Dict[str, Union[str, Dict[str, Any]]]] = {}
+        cutoff_time_in_epoch = timegm(time.strptime(self.cutoff_time, "%Y-%m-%dT%H:%M:%SZ"))
 
         for page in self._page_table_list_results(dataset):
             if 'tables' not in page:
@@ -42,7 +45,7 @@ class BigQueryWatermarkExtractor(BaseBigQueryExtractor):
                 table_id = tableRef['tableId']
                 table_creation_time = float(table['creationTime']) / 1000
                 # only extract watermark metadata for tables created before the cut-off time
-                if table_creation_time < self.cutoff_time:
+                if table_creation_time < cutoff_time_in_epoch:
                     # BigQuery tables that have 8 digits as last characters are
                     # considered date range tables and are grouped together in the UI.
                     # ( e.g. ga_sessions_20190101, ga_sessions_20190102, etc. )

@@ -141,7 +141,6 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
             'pageSize': self.pagesize,
             'filter': 'resource.type="bigquery_resource" AND '
                       'protoPayload.methodName="jobservice.jobcompleted" AND '
-                      'protoPayload.authenticationInfo.principalEmail="pawans@wepay.com" AND '
                       f'timestamp >= "{self.timestamp}" AND '
                       f'protoPayload.serviceData.jobCompletedEvent.job.jobStatistics.createTime < "{self.cutoff_time}"'
         }

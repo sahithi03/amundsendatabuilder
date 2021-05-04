@@ -267,8 +267,7 @@ class TestBigQueryWatermarkExtractor(unittest.TestCase):
     def test_table_creation_time_after_cutoff_time(self, mock_build: Any) -> None:
         config_dict = {
             f'extractor.bigquery_watermarks.{BigQueryWatermarkExtractor.PROJECT_ID_KEY}': 'your-project-here',
-            f'extractor.bigquery_watermarks.{BigQueryWatermarkExtractor.CUTOFF_TIME_KEY}':
-                '2019-05-10T20:10:22.757676+00:00'
+            f'extractor.bigquery_watermarks.{BigQueryWatermarkExtractor.CUTOFF_TIME_KEY}': '2019-05-10T20:10:22Z'
         }
         conf = ConfigFactory.from_dict(config_dict)
         mock_build.return_value = MockBigQueryClient(ONE_DATASET, TIME_PARTITIONED, PARTITION_DATA)
@@ -282,8 +281,7 @@ class TestBigQueryWatermarkExtractor(unittest.TestCase):
     def test_table_creation_time_before_cutoff_time(self, mock_build: Any) -> None:
         config_dict = {
             f'extractor.bigquery_watermarks.{BigQueryWatermarkExtractor.PROJECT_ID_KEY}': 'your-project-here',
-            f'extractor.bigquery_watermarks.{BigQueryWatermarkExtractor.CUTOFF_TIME_KEY}':
-                '2021-04-27T20:10:22.757676+00:00'
+            f'extractor.bigquery_watermarks.{BigQueryWatermarkExtractor.CUTOFF_TIME_KEY}': '2021-04-27T20:10:22Z'
         }
         conf = ConfigFactory.from_dict(config_dict)
         mock_build.return_value = MockBigQueryClient(ONE_DATASET, TIME_PARTITIONED, PARTITION_DATA)

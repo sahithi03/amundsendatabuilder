@@ -106,12 +106,23 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
             return
 
         for refResource in refResources:
+            tableId = refResource['tableId']
+            datasetId = refResource['datasetId']
+
+            if self._is_anonymous_table(tableId, datasetId):
+                continue
+
+            tableId = self._remove_table_decorators(tableId)
+
+            if self._is_sharded_table(tableId):
+                tableId = tableId[:-BigQueryTableUsageExtractor.DATE_LENGTH]
+
             if self.count_tables_only_from_project_id:
                 if refResource['projectId'] == self.project_id:
                     key = TableColumnUsageTuple(database='bigquery',
                                                 cluster=refResource['projectId'],
-                                                schema=refResource['datasetId'],
-                                                table=refResource['tableId'],
+                                                schema=datasetId,
+                                                table=tableId,
                                                 column='*',
                                                 email=email)
                 else:
@@ -121,8 +132,8 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
             else:
                 key = TableColumnUsageTuple(database='bigquery',
                                             cluster=refResource['projectId'],
-                                            schema=refResource['datasetId'],
-                                            table=refResource['tableId'],
+                                            schema=datasetId,
+                                            table=tableId,
                                             column='*',
                                             email=email)
 
@@ -139,10 +150,11 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
         body = {
             'resourceNames': [f'projects/{self.project_id}'],
             'pageSize': self.pagesize,
-            'filter': 'resource.type="bigquery_resource" AND '
-                      'protoPayload.methodName="jobservice.jobcompleted" AND '
-                      f'timestamp >= "{self.timestamp}" AND '
-                      f'protoPayload.serviceData.jobCompletedEvent.job.jobStatistics.createTime < "{self.cutoff_time}"'
+            'filter': 'protoPayload.methodName="jobservice.jobcompleted" AND '
+                      'resource.type="bigquery_resource" AND '
+                      'NOT protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.query:('
+                      'INFORMATION_SCHEMA OR __TABLES__) AND '
+                      f'timestamp >= "{self.timestamp}" AND timestamp < "{self.cutoff_time}"'
         }
         for page in self._page_over_results(body):
             for entry in page['entries']:
@@ -172,6 +184,15 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
             except Exception:
                 # Add a delay when BQ quota exceeds limitation
                 sleep(self.delay_time)
+
+    def _remove_table_decorators(self, tableId: str) -> str:
+        table_decorators = ['$', '@']
+        for decorator in table_decorators:
+            tableId = tableId.split(decorator)[0]
+        return tableId
+
+    def _is_anonymous_table(self, tableId: str, datasetId: str) -> bool:
+        return tableId.startswith('anon') and datasetId.startswith('_')
 
     def get_scope(self) -> str:
         return 'extractor.bigquery_table_usage'

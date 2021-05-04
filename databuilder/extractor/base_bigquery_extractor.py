@@ -4,7 +4,7 @@
 import json
 import logging
 from collections import namedtuple
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import (
     Any, Dict, Iterator, List,
 )
@@ -47,7 +47,7 @@ class BaseBigQueryExtractor(Extractor):
             BaseBigQueryExtractor.DEFAULT_PAGE_SIZE)
         self.filter = conf.get_string(BaseBigQueryExtractor.FILTER_KEY, '')
         self.cutoff_time = conf.get_string(
-            BaseBigQueryExtractor.CUTOFF_TIME_KEY, datetime.now(timezone.utc).isoformat()).rsplit(".")[0] + 'Z'
+            BaseBigQueryExtractor.CUTOFF_TIME_KEY, datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'))
 
         if self.key_path:
             credentials = (

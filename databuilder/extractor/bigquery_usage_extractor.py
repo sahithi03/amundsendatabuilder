@@ -147,8 +147,8 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
 
     def _retrieve_records(self) -> Iterator[Optional[Dict]]:
         """
-        Extracts bigquery log data by looking at the principalEmail in the
-        authenticationInfo block and referencedTables in the jobStatistics and filters out metadata queries.
+        Extracts bigquery log data by looking at the principalEmail in the authenticationInfo block and
+        referencedTables in the jobStatistics and filters out log entries of metadata queries.
         :return: Provides a record or None if no more to extract
         """
         body = {

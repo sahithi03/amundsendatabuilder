@@ -4,7 +4,9 @@
 import logging
 import re
 from collections import namedtuple
-from datetime import date, timedelta
+from datetime import (
+    datetime, timedelta, timezone,
+)
 from time import sleep
 from typing import (
     Any, Dict, Iterator, List, Optional, Tuple,
@@ -40,7 +42,7 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
         BaseBigQueryExtractor.init(self, conf)
         self.timestamp = conf.get_string(
             BigQueryTableUsageExtractor.TIMESTAMP_KEY,
-            (date.today() - timedelta(days=1)).strftime('%Y-%m-%dT00:00:00Z'))
+            (datetime.now(timezone.utc) - timedelta(days=1)).strftime(BigQueryTableUsageExtractor.DATE_TIME_FORMAT))
 
         self.email_pattern = conf.get_string(BigQueryTableUsageExtractor.EMAIL_PATTERN, None)
         self.delay_time = conf.get_int(BigQueryTableUsageExtractor.DELAY_TIME, 100)
@@ -109,13 +111,16 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
             tableId = refResource['tableId']
             datasetId = refResource['datasetId']
 
-            if self._is_anonymous_table(tableId, datasetId):
+            if self._is_anonymous_table(datasetId):
                 continue
 
             tableId = self._remove_table_decorators(tableId)
 
             if self._is_sharded_table(tableId):
                 tableId = tableId[:-BigQueryTableUsageExtractor.DATE_LENGTH]
+
+            if not tableId:
+                continue
 
             if self.count_tables_only_from_project_id:
                 if refResource['projectId'] == self.project_id:
@@ -143,8 +148,7 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
     def _retrieve_records(self) -> Iterator[Optional[Dict]]:
         """
         Extracts bigquery log data by looking at the principalEmail in the
-        authenticationInfo block and referencedTables in the jobStatistics.
-
+        authenticationInfo block and referencedTables in the jobStatistics and filters out metadata queries.
         :return: Provides a record or None if no more to extract
         """
         body = {
@@ -185,14 +189,15 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
                 # Add a delay when BQ quota exceeds limitation
                 sleep(self.delay_time)
 
-    def _remove_table_decorators(self, tableId: str) -> str:
-        table_decorators = ['$', '@']
+    def _remove_table_decorators(self, tableId: str) -> Optional[str]:
+        table_decorators = ['$', '@', '*']
         for decorator in table_decorators:
             tableId = tableId.split(decorator)[0]
         return tableId
 
-    def _is_anonymous_table(self, tableId: str, datasetId: str) -> bool:
-        return tableId.startswith('anon') and datasetId.startswith('_')
+    def _is_anonymous_table(self, datasetId: str) -> bool:
+        # anonymous tables are part of datasets that have names starting with '_'
+        return datasetId.startswith('_')
 
     def get_scope(self) -> str:
         return 'extractor.bigquery_table_usage'

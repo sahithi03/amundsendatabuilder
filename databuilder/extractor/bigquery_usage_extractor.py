@@ -37,6 +37,7 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
     # in the given project_id_key for the extractor is taken into account and usage metadata of referenced tables
     # from other projects is ignored.
     COUNT_TABLES_ONLY_FROM_PROJECT_ID_KEY = 'count_tables_only_from_project_id_key'
+    TABLE_DECORATORS = ['$', '@']
 
     def init(self, conf: ConfigTree) -> None:
         BaseBigQueryExtractor.init(self, conf)
@@ -111,16 +112,13 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
             tableId = refResource['tableId']
             datasetId = refResource['datasetId']
 
-            if self._is_anonymous_table(datasetId):
+            if self._is_anonymous_dataset(datasetId) or self._is_wildcard_table(tableId):
                 continue
 
             tableId = self._remove_table_decorators(tableId)
 
             if self._is_sharded_table(tableId):
                 tableId = tableId[:-BigQueryTableUsageExtractor.DATE_LENGTH]
-
-            if not tableId:
-                continue
 
             if self.count_tables_only_from_project_id:
                 if refResource['projectId'] == self.project_id:
@@ -190,14 +188,16 @@ class BigQueryTableUsageExtractor(BaseBigQueryExtractor):
                 sleep(self.delay_time)
 
     def _remove_table_decorators(self, tableId: str) -> Optional[str]:
-        table_decorators = ['$', '@', '*']
-        for decorator in table_decorators:
+        for decorator in BigQueryTableUsageExtractor.TABLE_DECORATORS:
             tableId = tableId.split(decorator)[0]
         return tableId
 
-    def _is_anonymous_table(self, datasetId: str) -> bool:
-        # anonymous tables are part of datasets that have names starting with '_'
+    def _is_anonymous_dataset(self, datasetId: str) -> bool:
+        # temporary/cached results tables are stored in anonymous datasets that have names starting with '_'
         return datasetId.startswith('_')
+
+    def _is_wildcard_table(self, tableId: str) -> bool:
+        return '*' in tableId
 
     def get_scope(self) -> str:
         return 'extractor.bigquery_table_usage'
